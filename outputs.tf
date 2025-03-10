@@ -1,19 +1,34 @@
-output "vm_public_ip" {
-  value = try(azurerm_public_ip.main[0].ip_address, "No public IP assigned")
+output "resource_group_name" {
+  description = "Name of the resource group"
+  value       = azurerm_resource_group.main.name
+}
+
+output "container_group_name" {
+  description = "Name of the container group"
+  value       = azurerm_container_group.main.name
+}
+
+output "container_group_ip" {
+  description = "IP address of the container group"
+  value       = var.networking_type == "Public" ? azurerm_container_group.main.ip_address : null
+}
+
+output "container_group_fqdn" {
+  description = "FQDN of the container group"
+  value       = var.networking_type == "Public" ? azurerm_container_group.main.fqdn : null
 }
 
 output "key_vault_name" {
-  value = var.enable_kms ? azurerm_key_vault.main[0].name : "KMS disabled"
+  description = "Name of the key vault"
+  value       = var.enable_key_vault ? azurerm_key_vault.main[0].name : null
 }
 
-output "managed_identity_client_id" {
-  value = azurerm_user_assigned_identity.main.client_id
+output "key_vault_uri" {
+  description = "URI of the key vault"
+  value       = var.enable_key_vault ? azurerm_key_vault.main[0].vault_uri : null
 }
 
-output "polaris_proxy_endpoint" {
-  value = "http://${try(azurerm_public_ip.main[0].ip_address, "No public IP")}:${var.polaris_proxy_port}"
-}
-
-output "workload_endpoint" {
-  value = "http://${try(azurerm_public_ip.main[0].ip_address, "No public IP")}:${var.workload_port}"
+output "key_name" {
+  description = "Name of the key"
+  value       = var.enable_key_vault ? local.key_name : null
 }
