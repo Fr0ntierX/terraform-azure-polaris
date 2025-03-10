@@ -1,22 +1,20 @@
 terraform {
-  required_version = ">= 0.13.0"
-
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 3.0.0"
+      version = "~> 4.22.0"
     }
-    azuread = {
-      source  = "hashicorp/azuread"
-      version = "~> 2.47"
-    }
-    time = {
-      source  = "hashicorp/time"
-      version = ">= 0.7.0"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = ">= 3.0.0"
+
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 1.9.0"
     }
   }
 }
+
+provider "azurerm" {
+  features {}
+  subscription_id = "4bd57494-c0a6-4ee2-b44d-8b398b4a8862"
+}
+
+data "azurerm_client_config" "current" {}
