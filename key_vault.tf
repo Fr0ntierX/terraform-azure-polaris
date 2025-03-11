@@ -7,31 +7,43 @@ resource "azurerm_key_vault" "main" {
   tenant_id                   = data.azurerm_client_config.current.tenant_id
   sku_name                    = "premium"
   enabled_for_disk_encryption = true
+  purge_protection_enabled    = true
 
-  # Access policy for Container Group
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = azurerm_container_group.main.identity[0].principal_id
-
-    key_permissions = [
-      "Get", "Release"
-    ]
-  }
-
-  # Access policy for Terraform principal
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    key_permissions = [
-      "Get", "List", "Create", "Delete",
-      "Update", "Import", "Recover", "Backup", "Restore",
-      "Decrypt", "Sign", "Verify", "WrapKey", "UnwrapKey",
-      "GetRotationPolicy", "SetRotationPolicy", "Purge"
-    ]
-  }
+  access_policy = []
 }
 
+resource "azurerm_key_vault_access_policy" "container" {
+  count        = var.enable_key_vault ? 1 : 0
+  key_vault_id = azurerm_key_vault.main[0].id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_container_group.main.identity[0].principal_id
+
+  key_permissions = [
+    "Get", "Release"
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "deployer" {
+  count        = var.enable_key_vault ? 1 : 0
+  key_vault_id = azurerm_key_vault.main[0].id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  key_permissions = [
+    "Get", "List", "Create", "Delete",
+    "Update", "Import", "Recover", "Backup", "Restore",
+    "Decrypt", "Sign", "Verify", "WrapKey", "UnwrapKey",
+    "GetRotationPolicy", "SetRotationPolicy", "Purge"
+  ]
+
+  certificate_permissions = [
+    "Get"
+  ]
+
+  secret_permissions = [
+    "Get"
+  ]
+}
 resource "azurerm_role_assignment" "main" {
   count = var.enable_key_vault ? 1 : 0
 
@@ -47,7 +59,7 @@ resource "azapi_resource" "kv_key" {
   name      = local.key_name
   parent_id = azurerm_key_vault.main[0].id
 
-  body = jsonencode({
+  body = {
     properties = {
       kty     = "RSA-HSM"
       keySize = 4096
@@ -62,9 +74,10 @@ resource "azapi_resource" "kv_key" {
         data        = base64encode(jsonencode(local.attestation_policy))
       }
     }
-  })
+  }
 
   depends_on = [
-    azurerm_key_vault.main
+    azurerm_key_vault.main,
+    azurerm_key_vault_access_policy.deployer
   ]
 }
