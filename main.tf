@@ -3,7 +3,7 @@ locals {
   key_vault_name = "${local.sanitized_name}-vault"
   key_name       = "${local.sanitized_name}-key"
 
-  vnet_name   = "${local.sanitized_name}-vnet"
+  vnet_name   = var.new_vnet_enabled ? "${local.sanitized_name}-vnet" : var.vnet_name
   subnet_name = "${local.sanitized_name}-subnet"
 
   container_sku = var.enable_key_vault ? "Confidential" : "Standard"
@@ -11,9 +11,9 @@ locals {
 
   vnet_resource_group_name = var.vnet_resource_group != "" ? var.vnet_resource_group : azurerm_resource_group.main.name
 
-  subnet_id = var.create_new_vnet ? (
+  subnet_id = var.new_vnet_enabled ? (
     azurerm_subnet.main[0].id
-  ) : (
+    ) : (
     "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${local.vnet_resource_group_name}/providers/Microsoft.Network/virtualNetworks/${local.vnet_name}/subnets/${local.subnet_name}"
   )
 

@@ -1,3 +1,4 @@
+# Core Configuration
 variable "name" {
   type        = string
   description = "Base name for all resources"
@@ -13,23 +14,20 @@ variable "subscription_id" {
   description = "Azure subscription ID"
 }
 
-variable "enable_key_vault" {
-  type        = bool
-  default     = true
-  description = "Enable confidential computing with hardware-based attestation and secure key release"
-}
-variable "container_memory" {
-  type        = number
-  default     = 4
-  description = "Memory size in GB for main workload container"
-}
-
+# Compute Resources
 variable "container_cpu" {
   type        = number
   default     = 1
   description = "CPU cores for main workload container"
 }
 
+variable "container_memory" {
+  type        = number
+  default     = 4
+  description = "Memory size in GB for main workload container"
+}
+
+# Networking Configuration
 variable "new_vnet_enabled" {
   type        = bool
   default     = true
@@ -40,21 +38,16 @@ variable "networking_type" {
   type        = string
   default     = "Public"
   validation {
-    condition     = (var.new_vnet_enabled == true) ? contains(["Public", "Private"], var.networking_type) : (var.networking_type == "Private")
-    error_message = "When using existing VNet (new_vnet_enabled=false), networking_type must be 'Private'"
+    condition     = contains(["Public", "Private"], var.networking_type)
+    error_message = "The networking_type must be either 'Public' or 'Private'."
   }
+  description = "Networking type for the container group (Public or Private)"
 }
 
 variable "dns_name_label" {
   type        = string
   default     = ""
   description = "DNS name label for public IP (leave empty for auto-generated name)"
-}
-
-variable "subnet_name" {
-  type        = string
-  default     = "default"
-  description = "Name of the subnet (either to be created or existing)"
 }
 
 variable "vnet_name" {
@@ -75,22 +68,23 @@ variable "vnet_address_space" {
   description = "Address space for a new virtual network"
 }
 
+variable "subnet_name" {
+  type        = string
+  default     = "default"
+  description = "Name of the subnet (either to be created or existing)"
+}
+
 variable "subnet_address_prefix" {
   type        = string
   default     = "10.0.1.0/24"
   description = "Address prefix for a new subnet"
 }
 
-variable "polaris_proxy_image_version" {
-  type        = string
-  default     = "latest"
-  description = "Polaris proxy image version/tag"
-}
-
-variable "polaris_proxy_port" {
-  type        = number
-  default     = 3000
-  description = "Port exposed by the Polaris proxy container"
+# Security & Encryption
+variable "enable_key_vault" {
+  type        = bool
+  default     = true
+  description = "Enable confidential computing with hardware-based attestation and secure key release"
 }
 
 variable "polaris_proxy_source_ranges" {
@@ -111,6 +105,19 @@ variable "polaris_proxy_enable_output_encryption" {
   description = "Enable encryption for output data"
 }
 
+# Polaris Proxy Configuration
+variable "polaris_proxy_image_version" {
+  type        = string
+  default     = "latest"
+  description = "Polaris proxy image version/tag"
+}
+
+variable "polaris_proxy_port" {
+  type        = number
+  default     = 3000
+  description = "Port exposed by the Polaris proxy container"
+}
+
 variable "polaris_proxy_enable_cors" {
   type        = bool
   default     = false
@@ -123,6 +130,7 @@ variable "polaris_proxy_enable_logging" {
   description = "Enable enhanced logging"
 }
 
+# Workload Configuration
 variable "workload_image" {
   type        = string
   description = "Container image for the workload container"
@@ -146,6 +154,7 @@ variable "workload_arguments" {
   description = "Command arguments for the workload container"
 }
 
+# Container Registry
 variable "registry_login_server" {
   type        = string
   default     = ""

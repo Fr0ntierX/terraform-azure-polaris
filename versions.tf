@@ -1,3 +1,7 @@
+provider "azurerm" {
+  features {}
+  subscription_id = var.subscription_id
+}
 terraform {
   required_providers {
     azurerm = {
@@ -7,14 +11,10 @@ terraform {
 
     azapi = {
       source  = "Azure/azapi"
-      version = "~> 1.9.0"
+      version = "~> 2.3.0"
     }
   }
 }
 
-provider "azurerm" {
-  features {}
-    subscription_id = var.subscriptionId
-}
 
 data "azurerm_client_config" "current" {}
