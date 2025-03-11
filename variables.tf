@@ -1,135 +1,166 @@
 variable "name" {
-  description = "Base name for all resources"
   type        = string
+  description = "Base name for all resources"
 }
 
 variable "location" {
-  description = "Azure region"
   type        = string
-  default     = "West Europe"
+  description = "Azure region for deployment"
 }
 
-variable "vm_size" {
-  description = "VM size for confidential computing"
+variable "subscription_id" {
   type        = string
-  default     = "Standard_DC4as_v5"
+  description = "Azure subscription ID"
 }
 
-variable "boot_disk_type" {
-  description = "OS disk type"
-  type        = string
-  default     = "Premium_LRS"
-}
-
-variable "boot_disk_size" {
-  description = "OS disk size in GB"
-  type        = number
-  default     = 50
-}
-
-variable "public_ip_type" {
-  description = "Public IP allocation type (Static, Dynamic, or NONE)"
-  type        = string
-  default     = "Static"
-}
-
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key"
-  type        = string
-}
-
-variable "enable_kms" {
-  description = "Enable Key Vault integration"
+variable "enable_key_vault" {
   type        = bool
-  default     = false
+  default     = true
+  description = "Enable confidential computing with hardware-based attestation and secure key release"
+}
+variable "container_memory" {
+  type        = number
+  default     = 4
+  description = "Memory size in GB for main workload container"
 }
 
-variable "polaris_proxy_image" {
-  description = "Polaris proxy container image"
+variable "container_cpu" {
+  type        = number
+  default     = 1
+  description = "CPU cores for main workload container"
+}
+
+variable "new_vnet_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to create a new virtual network (true) or use an existing one (false)"
+}
+
+variable "networking_type" {
   type        = string
-  default     = "fr0ntierx/polaris-proxy"
+  default     = "Public"
+  validation {
+    condition     = (var.new_vnet_enabled == true) ? contains(["Public", "Private"], var.networking_type) : (var.networking_type == "Private")
+    error_message = "When using existing VNet (new_vnet_enabled=false), networking_type must be 'Private'"
+  }
+}
+
+variable "dns_name_label" {
+  type        = string
+  default     = ""
+  description = "DNS name label for public IP (leave empty for auto-generated name)"
+}
+
+variable "subnet_name" {
+  type        = string
+  default     = "default"
+  description = "Name of the subnet (either to be created or existing)"
+}
+
+variable "vnet_name" {
+  type        = string
+  default     = ""
+  description = "Name of the existing virtual network when create_new_vnet=false"
+}
+
+variable "vnet_resource_group" {
+  type        = string
+  default     = ""
+  description = "Resource group containing the virtual network (for existing VNet, leave empty to use the module's resource group)"
+}
+
+variable "vnet_address_space" {
+  type        = list(string)
+  default     = ["10.0.0.0/16"]
+  description = "Address space for a new virtual network"
+}
+
+variable "subnet_address_prefix" {
+  type        = string
+  default     = "10.0.1.0/24"
+  description = "Address prefix for a new subnet"
 }
 
 variable "polaris_proxy_image_version" {
-  description = "Polaris proxy container version"
   type        = string
   default     = "latest"
+  description = "Polaris proxy image version/tag"
 }
 
 variable "polaris_proxy_port" {
-  description = "Polaris proxy port"
   type        = number
   default     = 3000
+  description = "Port exposed by the Polaris proxy container"
 }
 
 variable "polaris_proxy_source_ranges" {
-  description = "Allowed source IP ranges"
   type        = list(string)
   default     = ["0.0.0.0/0"]
+  description = "IP ranges allowed to access the Polaris proxy"
 }
 
 variable "polaris_proxy_enable_input_encryption" {
-  description = "Enable input encryption for Polaris proxy"
   type        = bool
   default     = false
+  description = "Enable encryption for input data"
 }
 
 variable "polaris_proxy_enable_output_encryption" {
-  description = "Enable output encryption for Polaris proxy"
   type        = bool
   default     = false
+  description = "Enable encryption for output data"
 }
 
 variable "polaris_proxy_enable_cors" {
-  description = "Enable CORS for Polaris proxy"
   type        = bool
   default     = false
+  description = "Enable CORS for API endpoints"
 }
 
 variable "polaris_proxy_enable_logging" {
-  description = "Enable logging for Polaris proxy"
   type        = bool
-  default     = false
-}
-
-variable "workload_port" {
-  description = "Workload container port"
-  type        = number
-  default     = 8000
+  default     = true
+  description = "Enable enhanced logging"
 }
 
 variable "workload_image" {
-  description = "Workload container image"
   type        = string
+  description = "Container image for the workload container"
 }
 
-variable "workload_entrypoint" {
-  description = "Workload container entrypoint"
-  type        = string
-  default     = ""
-}
-
-variable "workload_arguments" {
-  description = "Workload container arguments"
-  type        = list(string)
-  default     = []
+variable "workload_port" {
+  type        = number
+  default     = 8000
+  description = "Port exposed by the workload container"
 }
 
 variable "workload_env_vars" {
-  description = "Workload environment variables"
   type        = map(string)
   default     = {}
+  description = "Environment variables for the workload container"
 }
 
-# Add attestation-specific variables similar to GCP approach
-variable "attestation_federated_identity_enabled" {
-  description = "Enable federated credentials for attestation"
-  type        = bool
-  default     = true
+variable "workload_arguments" {
+  type        = list(string)
+  default     = []
+  description = "Command arguments for the workload container"
 }
 
-variable "azure_subscription_id" {
-  description = "Azure subscription ID"
+variable "registry_login_server" {
   type        = string
-  default     = null
+  default     = ""
+  description = "Custom container registry login server (if using)"
+}
+
+variable "registry_username" {
+  type        = string
+  default     = ""
+  description = "Custom container registry username"
+}
+
+variable "registry_password" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Custom container registry password"
 }
