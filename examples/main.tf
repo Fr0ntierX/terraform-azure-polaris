@@ -1,36 +1,39 @@
-# Define Azure provider at the root level
-provider "azurerm" {
-  features {}
-  subscription_id = "4bd57494-c0a6-4ee2-b44d-8b398b4a8862"
-}
-
-# Keep the azuread provider for authentication
-provider "azuread" {
-  tenant_id = "2cf53577-d63e-40c3-9d3b-ee93caa19b41"
-}
-
 module "polaris_azure_module" {
   source = "../"
-  
-  # No need for providers block since we're not using provider inheritance
-  
-  name                = "anonym-ser-3"
-  location            = "West Europe"
-  enable_kms          = true
-  vm_size             = "Standard_D4s_v5"
-  ssh_public_key_path = chomp(file("${path.module}/karol-key.pub"))
-  
-  # Pass subscription ID to the module
-  azure_subscription_id = "4bd57494-c0a6-4ee2-b44d-8b398b4a8862"
 
-  polaris_proxy_image         = "fr0ntierx/polaris-proxy"
-  polaris_proxy_port          = 3000
-  polaris_proxy_source_ranges = ["192.168.1.0/24"]
+  subscription_id = "3bc57494-c0a6-4ee2-b44d-8b398b4a8162"
+  
+  name     = "polaris-example-1"
+  location = "West Europe"
 
-  workload_image    = "fr0ntierx/anonymization-service"
-  workload_port     = 8000
-  workload_env_vars = {
-    "ENV_VAR1" = "value1"
-    "ENV_VAR2" = "value2"
-  }
+  # Security & Encryption
+  enable_key_vault = true
+
+  # Container Resources
+  container_memory = 4
+  container_cpu    = 2
+
+  # Networking Configuration
+  networking_type  = "Public" 
+  new_vnet_enabled = true
+  dns_name_label   = "polaris-example-app"
+
+  # Polaris Proxy Configuration
+  polaris_proxy_port                  = 3000
+  polaris_proxy_enable_input_encryption  = true
+  polaris_proxy_enable_output_encryption = true
+  polaris_proxy_enable_cors           = true
+  polaris_proxy_enable_logging        = true
+
+  # Workload Configuration
+  registry_login_server = "fr0ntierxpublicdev.azurecr.io"
+  registry_username     = "fr0ntierxpublicdev"
+  registry_password     = "4KSWNjq8hpWUZnfILdhWwoumK6Gw7lncPagTJOgpVR+ACRAt/7Ko"
+  workload_image        = "anonymization-service:latest"
+  workload_port         = 8000
+  
+  workload_arguments = [
+    "--workers", "4",
+    "--timeout", "600"
+  ]
 }
