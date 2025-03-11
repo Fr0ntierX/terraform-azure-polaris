@@ -15,7 +15,6 @@ module "polaris_azure_module" {
 
   # Networking Configuration
   networking_type  = "Public" 
-  new_vnet_enabled = true
   dns_name_label   = "polaris-example-app"
 
   # Polaris Proxy Configuration
