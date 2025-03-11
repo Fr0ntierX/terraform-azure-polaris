@@ -1,148 +1,245 @@
-# Polaris Terraform Module
+# Azure Polaris Terraform Module
 
 ## Overview
-The Polaris Terraform Module provisions a secure VM in Google Cloud with Confidential Computing enabled. It deploys two Docker containers:
+
+The Azure Polaris Terraform Module provisions confidential computing containers in Azure Container Instances (ACI) with optional Azure Key Vault integration. It deploys three containers:
+
 - **Polaris Proxy:** Exposes a secure service with configurable encryption, CORS, and logging.
-- **Client Workload:** Runs your custom workload.
+- **Client Workload:** Runs your custom workload application.
+- **SKR Sidecar:** (When Key Vault is enabled) Handles secure key release protocol.
 
-Optional integration with Cloud KMS enables enhanced security through asymmetric decryption backed by HSM, alongside workload identity federation.
+Optional integration with Azure Key Vault enables enhanced security through hardware attestation and secure key release policies.
 
-For more detailed information about Polaris, please visit the [Polaris documentation](https://docs.fr0ntierx.com).
+For more detailed information about Polaris, please visit the [Polaris documentation](https://docs.fr0ntierx.com)
 
 ## Requirements
 
-| Requirement                          | Details                                                                        |
-|--------------------------------------|--------------------------------------------------------------------------------|
-| Terraform                            | >= 1.9.8                                                                       |
-| Google Provider                      | >= 6.10.0                                                                      |
-| GCP Project                          | Billing enabled with necessary IAM permissions                                 |
+| Requirement        | Details                           |
+| ------------------ | --------------------------------- |
+| Terraform          | >= 1.0.0                          |
+| Azure Provider     | >= 4.22.0                         |
+| Azure API Provider | >= 2.3.0                          |
+| Azure Subscription | Active with necessary permissions |
 
-## Key Differences Between Polaris and Polaris Pro
-- **Polaris:** Standard secure VM with Docker containers.
-- **Polaris Pro:** In addition to the standard setup, it enables Cloud KMS integration, providing enhanced security via HSM-backed asymmetric decryption and workload identity federation, which may incur additional costs.
+## Key Differences Between Standard and Enhanced Modes
+
+- **Standard Mode:** Basic container group with Docker containers.
+- **Enhanced Mode:** In addition to the standard setup, it enables Azure Key Vault integration, providing enhanced security via HSM-backed key vault and secure key release, which may incur additional costs.
 
 ## Pricing Considerations
-Be aware that deploying Polaris Pro (with `enable_kms = true`) may incur additional costs compared to the standard Polaris deployment. The Polaris Pro mode leverages Cloud KMS and workload identity federation, which have their own pricing. Please refer to the relevant GCP pricing documentation for Cloud KMS, identity federation, and confidential computing features for detailed cost estimates.
+
+Be aware that deploying with `enable_key_vault = true` may incur additional costs compared to the standard deployment. This mode leverages Azure Key Vault Premium tier and confidential computing features, which have their own pricing. Please refer to Azure pricing documentation for detailed cost estimates.
 
 ## Variables
-| Name                            | Type               | Description                                                               | Default                                  |
-|---------------------------------|--------------------|---------------------------------------------------------------------------|------------------------------------------|
-| project_id                      | string             | Project ID for provisioning resources.                                | N/A                                      |
-| name                            | string             | Name                                                                      | N/A                                      |
-| enable_kms                      | bool               | Enable Cloud KMS integration for Polaris Proxy.                           | false                                    |
-| region                          | string             | Region for resource deployment.                                           | N/A                                      |
-| zone                            | string             | Zone where the instance will be deployed.                                 | us-central1-a                            |
-| machine_type                    | string             | VM machine type.                                                          | n2d-standard-2                           |
-| boot_disk_type                  | string             | Type of boot disk for the VM.                                             | pd-ssd                                   |
-| boot_disk_size                  | number             | Boot disk size in GB.                                                     | 10                                       |
-| networks                        | list(string)       | Networks where the VM will be created.                                    | ["default"]                              |
-| sub_networks                    | list(string)       | Subnets for VM deployment.                                                | ["default"]                              |
-| external_ips                    | list(string)       | External IP configuration for the VM.                                     | ["EPHEMERAL"]                            |
-| service_account                 | string             | Service Account used by the Compute Instance.                             | ""                                       |                                    |
-| polaris_proxy_port              | string             | Port exposed by the Polaris Proxy.                                        | "3000"                                   |
-| polaris_proxy_source_ranges     | string             | Comma-separated list of source IP ranges allowed to access the proxy.       | ""                                       |
-| polaris_proxy_enable_input_encryption  | bool       | Enable input encryption on the proxy container.                           | false                                    |
-| polaris_proxy_enable_output_encryption | bool       | Enable output encryption on the proxy container.                          | false                                    |
-| polaris_proxy_enable_cors       | bool               | Enable CORS support for Polaris Proxy.                                    | false                                    |
-| polaris_proxy_enable_logging    | bool               | Enable logging in the Polaris Proxy.                                      | true                                     |
-| polaris_proxy_image_version     | string             | Image version tag of the Polaris Proxy.                                   | "latest"                                 |
-| workload_port                   | string             | Port on which the workload container runs.                                | "8000"                                   |
-| workload_image                  | string             | Docker image URL for the client workload container.                       | N/A                                      |
-| workload_entrypoint             | string             | Entrypoint command for the workload container.                            | ""                                       |
-| workload_arguments              | list(string)       | Arguments to pass to the workload container.                              | []                                       |
-| workload_env_vars               | string             | JSON-formatted environment variables for the workload container.          | ""                                       |
+
+### Core Configuration
+
+| Name            | Type   | Description                 | Default |
+| --------------- | ------ | --------------------------- | ------- |
+| name            | string | Base name for all resources | N/A     |
+| location        | string | Azure region for deployment | N/A     |
+| subscription_id | string | Azure subscription ID       | N/A     |
+
+### Compute Resources
+
+| Name             | Type   | Description                                   | Default |
+| ---------------- | ------ | --------------------------------------------- | ------- |
+| container_cpu    | number | CPU cores for main workload container         | 1       |
+| container_memory | number | Memory size in GB for main workload container | 4       |
+
+### Networking Configuration
+
+| Name                  | Type         | Description                                | Default         |
+| --------------------- | ------------ | ------------------------------------------ | --------------- |
+| new_vnet_enabled      | bool         | Whether to create a new virtual network    | true            |
+| networking_type       | string       | Networking type (Public or Private)        | Public          |
+| dns_name_label        | string       | DNS name label for public IP               | ""              |
+| vnet_name             | string       | Name of existing virtual network           | ""              |
+| vnet_resource_group   | string       | Resource group of existing virtual network | ""              |
+| vnet_address_space    | list(string) | Address space for new virtual network      | ["10.0.0.0/16"] |
+| subnet_name           | string       | Subnet name                                | "default"       |
+| subnet_address_prefix | string       | Subnet address prefix                      | "10.0.1.0/24"   |
+
+### Security & Encryption
+
+| Name                                   | Type         | Description                                   | Default       |
+| -------------------------------------- | ------------ | --------------------------------------------- | ------------- |
+| enable_key_vault                       | bool         | Enable key vault integration                  | true          |
+| polaris_proxy_source_ranges            | list(string) | IP ranges allowed to access the Polaris proxy | ["0.0.0.0/0"] |
+| polaris_proxy_enable_input_encryption  | bool         | Enable input encryption                       | false         |
+| polaris_proxy_enable_output_encryption | bool         | Enable output encryption                      | false         |
+
+### Polaris Proxy Configuration
+
+| Name                         | Type   | Description                       | Default  |
+| ---------------------------- | ------ | --------------------------------- | -------- |
+| polaris_proxy_image_version  | string | Polaris proxy image version/tag   | "latest" |
+| polaris_proxy_port           | number | Port exposed by the Polaris proxy | 3000     |
+| polaris_proxy_enable_cors    | bool   | Enable CORS for API endpoints     | false    |
+| polaris_proxy_enable_logging | bool   | Enable enhanced logging           | true     |
+
+### Workload Configuration
+
+| Name               | Type         | Description                            | Default |
+| ------------------ | ------------ | -------------------------------------- | ------- |
+| workload_image     | string       | Container image for the workload       | N/A     |
+| workload_port      | number       | Port exposed by the workload           | 8000    |
+| workload_env_vars  | map(string)  | Environment variables for the workload | {}      |
+| workload_arguments | list(string) | Command arguments for the workload     | []      |
+
+### Container Registry
+
+| Name                  | Type   | Description                  | Default |
+| --------------------- | ------ | ---------------------------- | ------- |
+| registry_login_server | string | Custom registry login server | ""      |
+| registry_username     | string | Custom registry username     | ""      |
+| registry_password     | string | Custom registry password     | ""      |
 
 ## Module Modes
-The module offers two modes depending on the value of `enable_kms`:
 
-| Feature                          | Polaris (enable_kms = false)                         | Polaris Pro (enable_kms = true)                      |
-|----------------------------------|------------------------------------------------------|------------------------------------------------------|
-| VM Deployment                    | Standard secure VM with Docker containers            | Secure VM with additional KMS and workload identity support |
-| Container                        | Polaris Proxy                                        | Polaris Proxy configured for secure key management   |
-| KMS Integration                  | Not enabled                                          | Cloud KMS key ring and crypto key are provisioned     |
-| Identity Federation              | N/A                                                  | Workload Identity Pool and Provider configuration     |
+The module offers two modes depending on the value of `enable_key_vault`:
+
+| Feature         | Standard Mode (enable_key_vault = false) | Enhanced Mode (enable_key_vault = true)             |
+| --------------- | ---------------------------------------- | --------------------------------------------------- |
+| Container Group | Standard container group                 | Confidential container group with SKR sidecar       |
+| Authentication  | Basic container identity                 | System-assigned managed identity                    |
+| Key Management  | Ephemeral keys                           | Azure Key Vault integration with secure key release |
+| Security        | Container isolation                      | Hardware attestation and secure key release         |
 
 ## Outputs
-| Output Name            | Description                                    |
-|------------------------|------------------------------------------------|
-| instance_self_link     | Self-link URL for the Compute Instance.        |
-| instance_zone          | Zone where the instance is deployed.           |
-| instance_machine_type  | Type of the deployed Compute Instance.         |
-| instance_nat_ip        | External IP assigned to the instance.          |
-| instance_network       | Primary network associated with the instance.  |
+
+| Output Name          | Description                                           |
+| -------------------- | ----------------------------------------------------- |
+| resource_group_name  | Name of the resource group                            |
+| container_group_name | Name of the container group                           |
+| container_group_ip   | IP address of the container group (public networking) |
+| container_group_fqdn | FQDN of the container group (public networking)       |
+| key_vault_name       | Name of the key vault (when enabled)                  |
+| key_vault_uri        | URI of the key vault (when enabled)                   |
+| key_name             | Name of the key (when enabled)                        |
 
 ## Architecture
+
 The module provisions the following resources:
-- **Compute Instance:** A secure VM with Confidential Computing (AMD SEV and shielded instance configurations).
-- **Docker Containers:** Bootstrapped via cloud-init metadata:
-  - **Polaris Proxy Container:** Securely exposed with configurable networking and encryption settings.
+
+- **Resource Group:** Contains all deployed resources.
+- **Container Registry:** Azure Container Registry to store and manage container images.
+- **Container Group:** Azure Container Instances with 2-3 containers (depending on mode):
+  - **Polaris Proxy Container:** Securely exposes your service.
   - **Client Workload Container:** Runs your application code.
-- **Firewall Rules:** Restrict access to the proxy based on allowed source ranges.
-- **Optional Cloud KMS Setup:** When enabled, creates a Key Ring, Crypto Key (HSM-backed), and configures Workload Identity Federation for secure key management.
+  - **SKR Sidecar Container:** (Enhanced mode only) Handles secure key release protocol.
+- **Virtual Network:** (Optional) Network infrastructure for private networking.
+- **Network Security Group:** (Optional) Controls traffic to private containers.
+- **Key Vault:** (Enhanced mode only) Manages cryptographic keys with secure attestation.
 
-## Detailed Configuration & Examples
+## Pre-deployment Requirements
 
-### Confidential Computing
-- **Shielded Instance Config:** Secure boot, virtual TPM, and integrity monitoring are enabled.
-- **Confidential Instance Config:** Utilizes AMD SEV for memory encryption.
+### Authentication and Permissions
 
-### Docker & Metadata Setup
-- **Cloud-Init Script:** Configures the local Docker network, pulls images, and starts the Polaris Proxy and Workload containers.
-- **TPM Token Setup:** When KMS is active, additional steps are executed to obtain TPM tokens for attestation.
+This module requires:
 
-### KMS and Workload Identity (Optional)
-When `enable_kms` is true:
-- Provisions Cloud KMS Key Ring and Crypto Key with `ASYMMETRIC_DECRYPT` purpose.
-- Creates a Workload Identity Pool and Provider to allow federated identities secure access.
+1. An authenticated Azure session (via CLI, service principal, or managed identity)
+2. The `subscription_id` parameter must match your authenticated session's subscription
+3. The authenticated identity must have the following permissions:
+   - **Contributor** role on the subscription or resource group
+   - **User Access Administrator** role (for managing identities)
+   - **Key Vault Administrator** role (if using `enable_key_vault = true`)
 
-### Usage Example
-Below is a sample configuration:
+### Required Resource Providers
+
+Ensure these Azure resource providers are registered in your subscription:
+
+```bash
+az provider register --namespace Microsoft.ContainerInstance
+az provider register --namespace Microsoft.ContainerRegistry
+az provider register --namespace Microsoft.KeyVault
+az provider register --namespace Microsoft.Network
+az provider register --namespace Microsoft.ManagedIdentity
+```
+
+## Usage Example
+
 ```hcl
-module "polaris-terraform-module" {
-  source          = "./polaris-terraform-module"
-  
-  # Basic Configuration  
-  project_id      = "my-project"
-  name            = "polaris-instance"
-  region          = "us-central1"
-  zone            = "us-central1-a"
-  
-  # VM Configuration
-  machine_type    = "n2d-standard-2"
-  service_account = "PROJECT_NUMBER-compute@developer.gserviceaccount.com" 
-  
+module "polaris_azure_module" {
+  source = "path/to/module"
+
+  subscription_id = "your-subscription-id"
+
+  name     = "polaris-example"
+  location = "West Europe"
+
+  # Security & Encryption
+  enable_key_vault = true
+
+  # Container Resources
+  container_memory = 4
+  container_cpu    = 2
+
+  # Networking Configuration
+  networking_type  = "Public"
+  new_vnet_enabled = true
+  dns_name_label   = "polaris-example-app"
+
+  # Polaris Proxy Configuration
+  polaris_proxy_port                  = 3000
+  polaris_proxy_enable_input_encryption  = true
+  polaris_proxy_enable_output_encryption = true
+  polaris_proxy_enable_cors           = true
+  polaris_proxy_enable_logging        = true
+
   # Workload Configuration
-  workload_image  = "fr0ntierx/anonymization-service"
-  
-  # Feature Configuration
-  enable_kms      = true  # Switches between Polaris (false) and Polaris Pro (true)
+  workload_image = "your-registry.azurecr.io/your-workload:latest"
+  workload_port  = 8000
+
+  workload_env_vars = {
+    "API_KEY" = "your-api-key"
+    "DEBUG"   = "true"
+  }
 }
 ```
 
-### Deployment Steps
+## Deployment Steps
+
 1. Initialize Terraform:
-   ```sh
+
+   ```shell
    terraform init
    ```
+
 2. Plan the deployment:
-   ```sh
+
+   ```shell
    terraform plan
    ```
+
 3. Apply the configuration:
-   ```sh
+
+   ```shell
    terraform apply
    ```
 
-### Examples Comparison Table
+4. Access your Polaris service:
+   ```shell
+   curl http://$(terraform output -raw container_group_fqdn):3000/
+   ```
 
-| Feature                         | Enabled Example                     | Description                                                           |
-|---------------------------------|-------------------------------------|-----------------------------------------------------------------------|
-| Standard VM Deployment          | enable_kms = false                  | Deploys a VM with Docker containers only.                           |
-| Secure VM with KMS              | enable_kms = true                   | Deploys a VM with additional Cloud KMS and identity federation.      |
-| Custom Boot Disk                | boot_disk_size = 50                 | Deploys a VM with a 50GB boot disk instead of the default 10GB.         |
+## Security Recommendations
 
-## Further Documentation
-For additional customizations and advanced usage, refer to:
-- [Terraform Google Provider Documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [Google Cloud KMS Documentation](https://cloud.google.com/kms/docs)
-- [Terraform Cloud-Init Examples](https://www.terraform.io/docs/language/meta-arguments/metadata.html)
+1. Use private networking when possible
+2. Restrict IP access using `polaris_proxy_source_ranges`
+3. Enable Key Vault integration for production workloads
+4. Regularly rotate credentials and update container images
+5. Use environment variables or Azure Key Vault to store sensitive credentials like registry passwords
+6. Consider using Azure Managed Identities for registry access instead of username/password
+
+## Notes
+
+- When using private networking, ensure that your Azure subscription has the necessary VNET integration capabilities enabled
+- Confidential computing features are region-dependent; check Azure documentation for availability
+- For production workloads, consider using Azure DevOps or GitHub Actions for deployment pipelines
+
+## Further Resources
+
+- [Azure Confidential Computing Documentation](https://docs.microsoft.com/azure/confidential-computing/)
+- [Azure Container Instances Documentation](https://docs.microsoft.com/azure/container-instances/)
+- [Azure Key Vault Documentation](https://docs.microsoft.com/azure/key-vault/)
