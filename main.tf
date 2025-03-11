@@ -3,6 +3,9 @@ locals {
   key_vault_name = "${local.sanitized_name}-vault"
   key_name       = "${local.sanitized_name}-key"
 
+  vnet_name   = "${local.sanitized_name}-vnet"
+  subnet_name = "${local.sanitized_name}-subnet"
+
   container_sku = var.enable_key_vault ? "Confidential" : "Standard"
   key_type      = var.enable_key_vault ? "azure-skr" : "ephemeral"
 
@@ -10,8 +13,8 @@ locals {
 
   subnet_id = var.create_new_vnet ? (
     azurerm_subnet.main[0].id
-    ) : (
-    "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${local.vnet_resource_group_name}/providers/Microsoft.Network/virtualNetworks/${var.vnet_name}/subnets/${var.subnet_name}"
+  ) : (
+    "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${local.vnet_resource_group_name}/providers/Microsoft.Network/virtualNetworks/${local.vnet_name}/subnets/${local.subnet_name}"
   )
 
   attestation_policy = {
@@ -41,7 +44,6 @@ resource "azurerm_resource_group" "main" {
   location = var.location
 }
 
-# Container Registry
 resource "azurerm_container_registry" "acr" {
   name                = "${replace(lower(var.name), "-", "")}acr"
   resource_group_name = azurerm_resource_group.main.name
@@ -50,7 +52,6 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-# Import images to ACR
 resource "null_resource" "import_images" {
   triggers = {
     acr_id = azurerm_container_registry.acr.id
@@ -71,14 +72,13 @@ resource "null_resource" "import_images" {
   }
 }
 
-# Container Group
 resource "azurerm_container_group" "main" {
   name                = "${local.sanitized_name}-aci"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   os_type             = "Linux"
   ip_address_type     = var.networking_type == "Private" ? "Private" : "Public"
-  dns_name_label      = var.dns_name_label
+  dns_name_label      = var.networking_type == "Private" ? null : var.dns_name_label
   subnet_ids          = var.networking_type == "Private" ? [local.subnet_id] : null
   sku                 = local.container_sku
   dynamic "identity" {
@@ -90,7 +90,6 @@ resource "azurerm_container_group" "main" {
 
   depends_on = [null_resource.import_images]
 
-  # SKR Sidecar - tylko gdy enable_key_vault=true
   dynamic "container" {
     for_each = var.enable_key_vault ? [1] : []
     content {
