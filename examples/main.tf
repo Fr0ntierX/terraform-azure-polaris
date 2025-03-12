@@ -3,7 +3,7 @@ module "polaris_azure_module" {
 
   subscription_id = "3bc57494-c0a6-4ee2-b44d-8b398b4a8162"
   
-  name     = "polaris-example-1"
+  name     = "polaris-example"
   location = "West Europe"
 
   # Security & Encryption
@@ -15,7 +15,6 @@ module "polaris_azure_module" {
 
   # Networking Configuration
   networking_type  = "Public" 
-  dns_name_label   = "polaris-example-app"
 
   # Polaris Proxy Configuration
   polaris_proxy_port                  = 3000
@@ -30,9 +29,4 @@ module "polaris_azure_module" {
   registry_password     = "4KSWNjq8hpWUZnfILdhWwoumK6Gw7lncPagTJOgpVR+ACRAt/7Ko"
   workload_image        = "anonymization-service:latest"
   workload_port         = 8000
-  
-  workload_arguments = [
-    "--workers", "4",
-    "--timeout", "600"
-  ]
 }
