@@ -23,25 +23,6 @@ resource "azurerm_resource_group" "main" {
   location = var.location
 }
 
-resource "null_resource" "import_images" {
-  triggers = {
-    acr_id = azurerm_container_registry.acr.id
-  }
-
-  provisioner "local-exec" {
-    command = <<EOT
-    az acr import --name ${azurerm_container_registry.acr.name} \
-        --source "fr0ntierxpublic.azurecr.io/polaris-proxy":${var.polaris_proxy_image_version} \
-      --image polaris-proxy:${var.polaris_proxy_image_version} \
-      --force
-    
-    az acr import --name ${azurerm_container_registry.acr.name} \
-      --source mcr.microsoft.com/aci/skr:2.7 \
-      --image skr-sidecar:2.7 \
-      --force
-  EOT
-  }
-}
 
 resource "azurerm_container_group" "main" {
   name                = "${local.sanitized_name}-aci"
@@ -59,13 +40,11 @@ resource "azurerm_container_group" "main" {
     }
   }
 
-  depends_on = [null_resource.import_images]
-
   dynamic "container" {
     for_each = var.enable_key_vault ? [1] : []
     content {
       name   = "skr-sidecar-container"
-      image  = "${azurerm_container_registry.acr.login_server}/skr-sidecar:2.7"
+      image  = "mcr.microsoft.com/aci/skr:2.7"
       cpu    = "1"
       memory = "1"
 
@@ -81,7 +60,7 @@ resource "azurerm_container_group" "main" {
   # Polaris Proxy
   container {
     name   = "polaris-secure-proxy"
-    image  = "${azurerm_container_registry.acr.login_server}/polaris-proxy:${var.polaris_proxy_image_version}"
+    image  = "fr0ntierxpublic.azurecr.io/polaris-proxy:${var.polaris_proxy_image_version}"
     cpu    = "1"
     memory = "1"
 
@@ -120,17 +99,8 @@ resource "azurerm_container_group" "main" {
   }
 
   image_registry_credential {
-    server   = azurerm_container_registry.acr.login_server
-    username = azurerm_container_registry.acr.admin_username
-    password = azurerm_container_registry.acr.admin_password
-  }
-
-  dynamic "image_registry_credential" {
-    for_each = var.registry_login_server != "" ? [1] : []
-    content {
-      server   = var.registry_login_server
-      username = var.registry_username
-      password = var.registry_password
-    }
+    server   = var.registry_login_server
+    username = var.registry_username
+    password = var.registry_password
   }
 }
