@@ -68,6 +68,7 @@ Be aware that deploying with `enable_key_vault = true` may incur additional cost
 | polaris_proxy_source_ranges            | list(string) | IP ranges allowed to access the Polaris proxy | ["0.0.0.0/0"] |
 | polaris_proxy_enable_input_encryption  | bool         | Enable input encryption                       | false         |
 | polaris_proxy_enable_output_encryption | bool         | Enable output encryption                      | false         |
+| attestation_policy                     | object       | Custom attestation policy for secure key release | Default policy (see below) |
 
 ### Polaris Proxy Configuration
 
@@ -77,6 +78,7 @@ Be aware that deploying with `enable_key_vault = true` may incur additional cost
 | polaris_proxy_port           | number | Port exposed by the Polaris proxy | 3000     |
 | polaris_proxy_enable_cors    | bool   | Enable CORS for API endpoints     | false    |
 | polaris_proxy_enable_logging | bool   | Enable enhanced logging           | true     |
+| maa_endpoint                 | string | Microsoft Azure Attestation endpoint for SKR | "sharedweu.weu.attest.azure.net" |
 
 ### Workload Configuration
 
@@ -120,17 +122,15 @@ The module offers two modes depending on the value of `enable_key_vault`:
 
 ## Architecture
 
-The module provisions the following resources:
-
-- **Resource Group:** Contains all deployed resources.
-- **Container Registry:** Azure Container Registry to store and manage container images.
-- **Container Group:** Azure Container Instances with 2-3 containers (depending on mode):
-  - **Polaris Proxy Container:** Securely exposes your service.
-  - **Client Workload Container:** Runs your application code.
-  - **SKR Sidecar Container:** (Enhanced mode only) Handles secure key release protocol.
-- **Virtual Network:** (Optional) Network infrastructure for private networking.
-- **Network Security Group:** (Optional) Controls traffic to private containers.
-- **Key Vault:** (Enhanced mode only) Manages cryptographic keys with secure attestation.
+The module provisions these core resources:
+- Resource Group
+- Container Registry (ACR)
+- Container Group with:
+  - Polaris Proxy Container
+  - Client Workload Container
+  - SKR Sidecar Container (Enhanced mode only)
+- Virtual Network & NSG (when using private networking)
+- Key Vault with HSM-backed keys (Enhanced mode only)
 
 ## Pre-deployment Requirements
 
@@ -223,20 +223,6 @@ module "polaris_azure_module" {
    curl http://$(terraform output -raw container_group_fqdn):3000/
    ```
 
-## Security Recommendations
-
-1. Use private networking when possible
-2. Restrict IP access using `polaris_proxy_source_ranges`
-3. Enable Key Vault integration for production workloads
-4. Regularly rotate credentials and update container images
-5. Use environment variables or Azure Key Vault to store sensitive credentials like registry passwords
-6. Consider using Azure Managed Identities for registry access instead of username/password
-
-## Notes
-
-- When using private networking, ensure that your Azure subscription has the necessary VNET integration capabilities enabled
-- Confidential computing features are region-dependent; check Azure documentation for availability
-- For production workloads, consider using Azure DevOps or GitHub Actions for deployment pipelines
 
 ## Further Resources
 
