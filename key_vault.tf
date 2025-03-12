@@ -71,7 +71,7 @@ resource "azapi_resource" "kv_key" {
       ]
       release_policy = {
         contentType = "application/json; charset=utf-8"
-        data        = base64encode(jsonencode(local.attestation_policy))
+        data        = base64encode(jsonencode(var.attestation_policy))
       }
     }
   }

@@ -35,8 +35,8 @@ variable "new_vnet_enabled" {
 }
 
 variable "networking_type" {
-  type        = string
-  default     = "Public"
+  type    = string
+  default = "Public"
   validation {
     condition     = contains(["Public", "Private"], var.networking_type)
     error_message = "The networking_type must be either 'Public' or 'Private'."
@@ -105,6 +105,29 @@ variable "polaris_proxy_enable_output_encryption" {
   description = "Enable encryption for output data"
 }
 
+variable "attestation_policy" {
+  type = any
+  default = {
+    version = "1.0.0"
+    anyOf = [
+      {
+        authority = "https://sharedweu.weu.attest.azure.net"
+        allOf = [
+          {
+            claim  = "x-ms-attestation-type"
+            equals = "sevsnpvm"
+          },
+          {
+            claim  = "x-ms-compliance-status"
+            equals = "azure-compliant-uvm"
+          }
+        ]
+      }
+    ]
+  }
+  description = "Custom attestation policy for secure key release."
+}
+
 # Polaris Proxy Configuration
 variable "polaris_proxy_image_version" {
   type        = string
@@ -122,6 +145,12 @@ variable "polaris_proxy_enable_cors" {
   type        = bool
   default     = false
   description = "Enable CORS for API endpoints"
+}
+
+variable "maa_endpoint" {
+  description = "MAA endpoint for SKR container"
+  type        = string
+  default     = "sharedweu.weu.attest.azure.net"
 }
 
 variable "polaris_proxy_enable_logging" {

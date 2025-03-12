@@ -16,40 +16,11 @@ locals {
     ) : (
     "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${local.vnet_resource_group_name}/providers/Microsoft.Network/virtualNetworks/${local.vnet_name}/subnets/${local.subnet_name}"
   )
-
-  attestation_policy = {
-    version = "1.0.0"
-    anyOf = [
-      {
-        authority = "https://sharedweu.weu.attest.azure.net"
-        allOf = concat(
-          [
-            {
-              claim  = "x-ms-attestation-type"
-              equals = "sevsnpvm"
-            },
-            {
-              claim  = "x-ms-compliance-status"
-              equals = "azure-compliant-uvm"
-            }
-          ],
-        )
-      }
-    ]
-  }
 }
 
 resource "azurerm_resource_group" "main" {
   name     = "${local.sanitized_name}-rg"
   location = var.location
-}
-
-resource "azurerm_container_registry" "acr" {
-  name                = "${replace(lower(var.name), "-", "")}acr"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = var.location
-  sku                 = "Standard"
-  admin_enabled       = true
 }
 
 resource "null_resource" "import_images" {
@@ -100,12 +71,6 @@ resource "azurerm_container_group" "main" {
 
       commands = ["/skr.sh"]
 
-      environment_variables = {
-        "POLARIS_CONTAINER_AZURE_SKR_MAA_ENDPOINT" = "sharedweu.weu.attest.azure.net"
-        "POLARIS_CONTAINER_AZURE_SKR_AKV_ENDPOINT" = "${local.key_vault_name}.vault.azure.net"
-        "POLARIS_CONTAINER_AZURE_SKR_KID"          = local.key_name
-      }
-
       ports {
         port     = 8080
         protocol = "TCP"
@@ -127,7 +92,7 @@ resource "azurerm_container_group" "main" {
       POLARIS_CONTAINER_ENABLE_OUTPUT_ENCRYPTION = var.polaris_proxy_enable_output_encryption
       POLARIS_CONTAINER_ENABLE_CORS              = var.polaris_proxy_enable_cors
       POLARIS_CONTAINER_ENABLE_LOGGING           = var.polaris_proxy_enable_logging
-      POLARIS_CONTAINER_AZURE_SKR_MAA_ENDPOINT   = "sharedweu.weu.attest.azure.net"
+      POLARIS_CONTAINER_AZURE_SKR_MAA_ENDPOINT   = var.maa_endpoint
       POLARIS_CONTAINER_AZURE_SKR_AKV_ENDPOINT   = "${local.key_vault_name}.vault.azure.net"
       POLARIS_CONTAINER_AZURE_SKR_KID            = local.key_name
     }
