@@ -68,7 +68,7 @@ Be aware that deploying with `enable_key_vault = true` may incur additional cost
 | polaris_proxy_source_ranges            | list(string) | IP ranges allowed to access the Polaris proxy | ["0.0.0.0/0"] |
 | polaris_proxy_enable_input_encryption  | bool         | Enable input encryption                       | false         |
 | polaris_proxy_enable_output_encryption | bool         | Enable output encryption                      | false         |
-| attestation_policy                     | object       | Custom attestation policy for secure key release | Default policy (see below) |
+| attestation_policy                     | object       | Custom attestation policy for secure key release |
 
 ### Polaris Proxy Configuration
 

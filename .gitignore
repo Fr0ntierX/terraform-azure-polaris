@@ -35,6 +35,6 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
-
-*.pem
-*.pub
+# OS generated files  
+.DS_Store  
+**/.DS_Store
