@@ -1,3 +1,24 @@
+locals {
+  attestation_policy = var.attestation_policy != null ? var.attestation_policy : {
+    version = "1.0.0"
+    anyOf = [
+      {
+        authority = "https://${var.maa_endpoint}"
+        allOf = [
+          {
+            claim  = "x-ms-attestation-type"
+            equals = "sevsnpvm"
+          },
+          {
+            claim  = "x-ms-compliance-status"
+            equals = "azure-compliant-uvm"
+          }
+        ]
+      }
+    ]
+  }
+}
+
 resource "azurerm_key_vault" "main" {
   count = var.enable_key_vault ? 1 : 0
 
@@ -71,7 +92,7 @@ resource "azapi_resource" "kv_key" {
       ]
       release_policy = {
         contentType = "application/json; charset=utf-8"
-        data        = base64encode(jsonencode(var.attestation_policy))
+        data        = base64encode(jsonencode(local.attestation_policy))
       }
     }
   }

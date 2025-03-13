@@ -6,7 +6,7 @@ locals {
   vnet_name   = var.new_vnet_enabled ? "${local.sanitized_name}-vnet" : var.vnet_name
   subnet_name = "${local.sanitized_name}-subnet"
 
-  container_sku = var.enable_key_vault ? "Confidential" : "Standard"
+  container_sku = "Confidential"
   key_type      = var.enable_key_vault ? "azure-skr" : "ephemeral"
 
   vnet_resource_group_name = var.vnet_resource_group != "" ? var.vnet_resource_group : azurerm_resource_group.main.name

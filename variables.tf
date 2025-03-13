@@ -106,26 +106,9 @@ variable "polaris_proxy_enable_output_encryption" {
 }
 
 variable "attestation_policy" {
-  type = any
-  default = {
-    version = "1.0.0"
-    anyOf = [
-      {
-        authority = "https://sharedweu.weu.attest.azure.net"
-        allOf = [
-          {
-            claim  = "x-ms-attestation-type"
-            equals = "sevsnpvm"
-          },
-          {
-            claim  = "x-ms-compliance-status"
-            equals = "azure-compliant-uvm"
-          }
-        ]
-      }
-    ]
-  }
+  type        = any
   description = "Custom attestation policy for secure key release."
+  default     = null
 }
 
 # Polaris Proxy Configuration
