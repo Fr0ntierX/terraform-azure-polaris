@@ -1,7 +1,7 @@
 module "polaris_azure_module" {
-  source = "../"
+  source = "Fr0ntierX/polaris/azure"
 
-  subscription_id = "3bc57494-c0a6-4ee2-b44d-8b398b4a8162"
+  subscription_id = "your-subscription-id"
   
   name     = "polaris-example"
   location = "West Europe"
@@ -17,7 +17,6 @@ module "polaris_azure_module" {
   networking_type  = "Public" 
 
   # Polaris Proxy Configuration
-  polaris_proxy_port                  = 3000
   polaris_proxy_enable_input_encryption  = true
   polaris_proxy_enable_output_encryption = true
   polaris_proxy_enable_cors           = true
