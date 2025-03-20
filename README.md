@@ -21,10 +21,10 @@ For more detailed information about Polaris, please visit the [Polaris documenta
 | Azure API Provider | >= 2.3.0                          |
 | Azure Subscription | Active with necessary permissions |
 
-## Key Differences Between Standard and Enhanced Modes
+## Key Differences Between Polaris and Polaris Pro
 
-- **Standard Mode:** Basic container group with Docker containers.
-- **Enhanced Mode:** In addition to the standard setup, it enables Azure Key Vault integration, providing enhanced security via HSM-backed key vault and secure key release, which may incur additional costs.
+- **Polaris:** Basic container group with Docker containers.
+- **Polaris Pro:** In addition to the standard setup, it enables Azure Key Vault integration, providing enhanced security via HSM-backed key vault and secure key release, which may incur additional costs.
 
 ## Pricing Considerations
 
@@ -68,7 +68,7 @@ Be aware that deploying with `enable_key_vault = true` may incur additional cost
 | polaris_proxy_source_ranges            | list(string) | IP ranges allowed to access the Polaris proxy | ["0.0.0.0/0"] |
 | polaris_proxy_enable_input_encryption  | bool         | Enable input encryption                       | false         |
 | polaris_proxy_enable_output_encryption | bool         | Enable output encryption                      | false         |
-| attestation_policy                     | object       | Custom attestation policy for secure key release |
+| attestation_policy                     | object       | Custom attestation policy for secure key release | Default policy (see below) |
 
 ### Polaris Proxy Configuration
 
@@ -101,12 +101,12 @@ Be aware that deploying with `enable_key_vault = true` may incur additional cost
 
 The module offers two modes depending on the value of `enable_key_vault`:
 
-| Feature         | Standard Mode (enable_key_vault = false) | Enhanced Mode (enable_key_vault = true)             |
-| --------------- | ---------------------------------------- | --------------------------------------------------- |
-| Container Group | Standard container group                 | Confidential container group with SKR sidecar       |
-| Authentication  | Basic container identity                 | System-assigned managed identity                    |
-| Key Management  | Ephemeral keys                           | Azure Key Vault integration with secure key release |
-| Security        | Container isolation                      | Hardware attestation and secure key release         |
+| Feature         | Polaris (enable_key_vault = false) | Polaris Pro (enable_key_vault = true)             |
+| --------------- | -------------------------------- | --------------------------------------------------- |
+| Container Group | Standard container group         | Confidential container group with SKR sidecar       |
+| Authentication  | Basic container identity         | System-assigned managed identity                    |
+| Key Management  | Ephemeral keys                   | Azure Key Vault integration with secure key release |
+| Security        | Container isolation              | Hardware attestation and secure key release         |
 
 ## Outputs
 
@@ -128,11 +128,35 @@ The module provisions these core resources:
 - Container Group with:
   - Polaris Proxy Container
   - Client Workload Container
-  - SKR Sidecar Container (Enhanced mode only)
+  - SKR Sidecar Container (Polaris Pro only)
 - Virtual Network & NSG (when using private networking)
-- Key Vault with HSM-backed keys (Enhanced mode only)
+- Key Vault with HSM-backed keys (Polaris Pro only)
 
-## Pre-deployment Requirements
+## Detailed Configuration & Examples
+
+### Confidential Computing
+
+- **Azure Confidential Containers:** When `enable_key_vault = true`, the module deploys Confidential Containers using Azure's Confidential Computing platform.
+- **Hardware Attestation:** The system leverages Azure Attestation Service for hardware-level validation of container integrity.
+- **Secure Key Release:** Uses Azure Key Vault's SKR protocol to only release keys to validated confidential environments.
+
+### Container Architecture
+
+- **Polaris Proxy Container:** Front-facing service that handles API requests, enforces security policies, and manages encryption.
+- **Client Workload Container:** Your application code running in an isolated environment.
+- **SKR Sidecar Container:** In Polaris Pro mode, facilitates communication with Azure Attestation and Key Vault for key management.
+
+### Networking & Security
+
+- **Public vs Private Networking:** Choose between public-facing deployments or private VNET integration.
+- **IP Restrictions:** Configure `polaris_proxy_source_ranges` to limit access to specific IP addresses.
+- **Delegation Setup:** For private networking, the module configures proper subnet delegation for ACI.
+
+### Key Management
+
+- **HSM-Backed Keys:** In Polaris Pro mode, keys are stored in Azure Key Vault's Hardware Security Modules.
+- **Attestation Policy:** Customize the attestation requirements for key release with the `attestation_policy` variable.
+- **MAA Integration:** Configure regional Microsoft Azure Attestation endpoints via the `maa_endpoint` variable.
 
 ### Authentication and Permissions
 
@@ -161,7 +185,7 @@ az provider register --namespace Microsoft.ManagedIdentity
 
 ```hcl
 module "polaris_azure_module" {
-  source = "path/to/module"
+  source = "Fr0ntierX/polaris/azure"
 
   subscription_id = "your-subscription-id"
 
@@ -181,7 +205,6 @@ module "polaris_azure_module" {
   dns_name_label   = "polaris-example-app"
 
   # Polaris Proxy Configuration
-  polaris_proxy_port                  = 3000
   polaris_proxy_enable_input_encryption  = true
   polaris_proxy_enable_output_encryption = true
   polaris_proxy_enable_cors           = true
@@ -190,38 +213,8 @@ module "polaris_azure_module" {
   # Workload Configuration
   workload_image = "your-registry.azurecr.io/your-workload:latest"
   workload_port  = 8000
-
-  workload_env_vars = {
-    "API_KEY" = "your-api-key"
-    "DEBUG"   = "true"
-  }
 }
 ```
-
-## Deployment Steps
-
-1. Initialize Terraform:
-
-   ```shell
-   terraform init
-   ```
-
-2. Plan the deployment:
-
-   ```shell
-   terraform plan
-   ```
-
-3. Apply the configuration:
-
-   ```shell
-   terraform apply
-   ```
-
-4. Access your Polaris service:
-   ```shell
-   curl http://$(terraform output -raw container_group_fqdn):3000/
-   ```
 
 
 ## Further Resources
