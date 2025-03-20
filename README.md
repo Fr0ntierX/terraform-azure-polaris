@@ -213,11 +213,6 @@ module "polaris_azure_module" {
   # Workload Configuration
   workload_image = "your-registry.azurecr.io/your-workload:latest"
   workload_port  = 8000
-
-  workload_env_vars = {
-    "API_KEY" = "your-api-key"
-    "DEBUG"   = "true"
-  }
 }
 ```
 
