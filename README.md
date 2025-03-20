@@ -158,16 +158,6 @@ The module provisions these core resources:
 - **Attestation Policy:** Customize the attestation requirements for key release with the `attestation_policy` variable.
 - **MAA Integration:** Configure regional Microsoft Azure Attestation endpoints via the `maa_endpoint` variable.
 
-### Security Best Practices
-
-1. Use private networking when possible to limit attack surface
-2. Restrict access using `polaris_proxy_source_ranges` to trusted IP ranges only
-3. In production, enable Polaris Pro mode with Key Vault integration
-4. Use a custom attestation policy to enforce specific security requirements
-5. Configure regular key rotation using Azure Key Vault's rotation policies
-
-## Pre-deployment Requirements
-
 ### Authentication and Permissions
 
 This module requires:
